@@ -32,10 +32,21 @@ async function run() {
         // Create Collection
         const Database = client.db("smart_db");
         const productsCollection = Database.collection("products");
+        const bidsCollection = Database.collection("bids")
 
         // Get
         app.get("/products", async(req, res) => {
-            const cursor = productsCollection.find();
+            // const cursor = productsCollection.find().sort({price_min: 1}).skip(5).limit(3);
+
+            // Query Parameter
+            console.log(req.query)
+            const email = req.query.email
+            const query = {}
+            if(email){
+                query.email = email
+            }
+
+            const cursor = productsCollection.find(query)
             const result = await cursor.toArray()
             res.send(result);
         })
@@ -78,6 +89,36 @@ async function run() {
             const result = await productsCollection.deleteOne(query);
             res.send(result);
         })
+
+
+        // Bids Related API 
+
+        app.get("/bids", async(req, res) => {
+
+            // Query Parameter 
+            console.log(req.query)
+            const email = req.query.email
+            const query = {}
+            if(email){
+                query.user_email = email
+            }
+
+            const cursor = bidsCollection.find(query);
+            const result = await cursor.toArray()
+            res.send(result);
+        })
+
+        // Bids Post 
+        app.post("/bids", async(req, res) => {
+            const newBids = req.body;
+            const result = await bidsCollection.insertOne(newBids);
+            res.send(result)
+        })
+
+
+
+
+        
 
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");

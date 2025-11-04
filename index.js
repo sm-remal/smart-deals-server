@@ -3,14 +3,50 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const admin = require("firebase-admin");
 
 // Initialize Express app
 const app = express();
 const port = process.env.PORT || 3000;
 
+
+
+const serviceAccount = require("./smart-deals-firebase-adminsdk.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+
+
 // ===================== MIDDLEWARE SETUP ===================== //
 app.use(cors());              // Enable Cross-Origin Resource Sharing
 app.use(express.json());      // Parse incoming JSON requests
+
+const logger = (req, res, next) => {     // Verify Token
+    console.log("logger information")
+    next();
+}
+
+const verifyFirebaseToken = async(req, res, next) => {
+    // console.log("Firebase-Token: ", req.headers.authorization);
+    if(!req.headers.authorization){
+        return res.status(401).send({message: "unauthorized access"})
+    }
+    const token = req.headers.authorization.split(" ")[1];
+    if(!token){
+        return res.status(401).send({message: "unauthorized access"})
+    }
+    try{
+        const userInfo = await admin.auth().verifyIdToken(token);
+        req.token_email = userInfo.email;
+        console.log("userInfo: ", userInfo)
+        next();
+    }
+    catch{
+        return res.status(401).send({message: 'unauthorized access'})
+    }
+    next()
+}
 
 // ===================== MONGODB CONNECTION ===================== //
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clustersm.e6uuj86.mongodb.net/?appName=ClusterSM`;
@@ -129,6 +165,7 @@ async function run() {
 
         // GET: Get all bids or filter by user email
         app.get("/bids", async (req, res) => {
+            
             console.log(req.query);
             const email = req.query.email;
             const query = {};
@@ -151,10 +188,15 @@ async function run() {
         });
 
         // GET: Get all bids placed by a specific buyer (by email)
-        app.get("/my-bids", async (req, res) => {
+        app.get("/my-bids", logger, verifyFirebaseToken, async (req, res) => {
+            // console.log("Headers: " , req.headers)
             const email = req.query.email;
             const query = {};
             if (email) {
+
+                if(email !== req.token_email){       // verify or match email address
+                    return res.status(403).send({message: "forbidden access"})
+                }
                 query.buyer_email = email; // Filter by buyer email
             }
 

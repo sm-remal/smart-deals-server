@@ -45,7 +45,6 @@ const verifyFirebaseToken = async(req, res, next) => {
     catch{
         return res.status(401).send({message: 'unauthorized access'})
     }
-    next()
 }
 
 // ===================== MONGODB CONNECTION ===================== //

@@ -236,3 +236,4 @@ run().catch(console.dir);
 app.listen(port, () => {
     console.log(`Simple Deals Server at port: ${port}`)
 });
+
